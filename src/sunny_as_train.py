@@ -95,8 +95,8 @@ def parse_description(path):
     and returns the following values: TIMEOUT, n. of FEATURES,
     PORTFOLIO and n. of ALGORITHM.
     '''
-    with open(path + '/aslib_data/description.txt', 'r') as file:
-        for line in file:
+    with open(path + '/description.txt', 'r') as f:
+        for line in f:
             [key, value] = line.split(': ', 1)
             if key == 'algorithm_cutoff_time':
                 timeout = value
@@ -105,7 +105,7 @@ def parse_description(path):
             elif key == 'algorithms_deterministic':
                 portfolio = value.split(',')
                 algorithms = len(portfolio)
-    file.close()                                                
+    f.close()                                                
     return timeout, features, portfolio, algorithms
 
 
@@ -114,4 +114,7 @@ SCENARIO, LB, UB, DEF_FEAT_VALUE, KB_PATH, KB_NAME = \
 parse_arguments(sys.argv[1:])
 
 TIMEOUT, FEATURES, PORTFOLIO, ALGORITHMS = \
-parse_description(os.getcwd() + '/../data/aslib_' + VERSION + '/' + SCENARIO)
+parse_description(os.path.abspath(os.path.join(os.getcwd(), os.pardir)) + 
+                  '/data/aslib_' + VERSION + '/' + SCENARIO)
+
+print(TIMEOUT, FEATURES, PORTFOLIO, ALGORITHMS)
