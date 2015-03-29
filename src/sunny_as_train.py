@@ -28,6 +28,10 @@ import sys
 import os
 import getopt
 
+# ASLib version.
+VERSION = '1.0.1'
+
+
 def parse_arguments(args):
     '''
     Parse the options specified by the user and returns the corresponding
@@ -38,7 +42,7 @@ def parse_arguments(args):
         opts, args = getopt.getopt(args, 'h:', long_options)
     except getopt.GetoptError as msg:
         print(msg)
-        print >> sys.stderr, 'For help use --help'
+        print('For help use --help', sys.stderr)
         sys.exit(2)
         
     if len(args) == 0:         
@@ -47,8 +51,8 @@ def parse_arguments(args):
             if o in ('-h', '--help'):
                 print(__doc__)
                 sys.exit(0)
-        print >> sys.stderr, 'Error! No arguments given.'
-        print >> sys.stderr, 'For help use --help'
+        print('Error! No arguments given.', sys.stderr)
+        print('For help use --help', sys.stderr)
         sys.exit(2)
     
     scenario = args[0]
@@ -82,5 +86,32 @@ def parse_arguments(args):
         elif o == 'kb-name':
             name = a
     
-    return lb, ub, feat_val, path, name
+    return scenario, lb, ub, feat_val, path, name
 
+
+def parse_description(path):
+    '''
+    Assuming path is the current SCENARIO path, parse the description
+    and returns the following values: TIMEOUT, n. of FEATURES,
+    PORTFOLIO and n. of ALGORITHM.
+    '''
+    with open(path + '/aslib_data/description.txt', 'r') as file:
+        for line in file:
+            [key, value] = line.split(': ', 1)
+            if key == 'algorithm_cutoff_time':
+                timeout = value
+            elif key == 'features_deterministic':
+                features = len(value.split(','))
+            elif key == 'algorithms_deterministic':
+                portfolio = value.split(',')
+                algorithms = len(portfolio)
+    file.close()                                                
+    return timeout, features, portfolio, algorithms
+
+
+# Initialize Feature and Knowledge Base variables.
+SCENARIO, LB, UB, DEF_FEAT_VALUE, KB_PATH, KB_NAME = \
+parse_arguments(sys.argv[1:])
+
+TIMEOUT, FEATURES, PORTFOLIO, ALGORITHMS = \
+parse_description(os.getcwd() + '/../data/aslib_' + VERSION + '/' + SCENARIO)
