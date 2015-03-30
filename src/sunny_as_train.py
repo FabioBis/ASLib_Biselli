@@ -95,6 +95,7 @@ def parse_description(path):
     and returns the following values: TIMEOUT, n. of FEATURES,
     PORTFOLIO and n. of ALGORITHM.
     '''
+    #FIXME use csv.reader
     with open(path + '/description.txt', 'r') as f:
         for line in f:
             [key, value] = line.split(': ', 1)
@@ -104,17 +105,16 @@ def parse_description(path):
                 features = len(value.split(','))
             elif key == 'algorithms_deterministic':
                 portfolio = value.strip(' \n').split(',')
-                algorithms = len(portfolio)
     f.close()                                                
-    return timeout, features, portfolio, algorithms
+    return timeout, features, portfolio
 
 
 # Initialize Feature and Knowledge Base variables.
 SCENARIO, LB, UB, DEF_FEAT_VALUE, KB_PATH, KB_NAME = \
 parse_arguments(sys.argv[1:])
 
-TIMEOUT, FEATURES, PORTFOLIO, ALGORITHMS = \
+TIMEOUT, FEATURES, PORTFOLIO = \
 parse_description(os.path.abspath(os.path.join(os.getcwd(), os.pardir)) + 
                   '/data/aslib_' + VERSION + '/' + SCENARIO)
 
-print(TIMEOUT, FEATURES, PORTFOLIO, ALGORITHMS)
+print(TIMEOUT, FEATURES, PORTFOLIO)
