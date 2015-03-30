@@ -99,11 +99,11 @@ def parse_description(path):
         for line in f:
             [key, value] = line.split(': ', 1)
             if key == 'algorithm_cutoff_time':
-                timeout = value
+                timeout = int(value.rstrip('\n'))
             elif key == 'features_deterministic':
                 features = len(value.split(','))
             elif key == 'algorithms_deterministic':
-                portfolio = value.split(',')
+                portfolio = value.strip(' \n').split(',')
                 algorithms = len(portfolio)
     f.close()                                                
     return timeout, features, portfolio, algorithms
