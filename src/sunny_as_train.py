@@ -124,12 +124,16 @@ TIMEOUT, FEATURES, PORTFOLIO = \
 parse_description(WD_PATH)
 
 
-print(SCENARIO, LB, UB, DEF_FEAT_VALUE, KB_PATH, KB_NAME, TIMEOUT, FEATURES,
-      PORTFOLIO)
+#print(SCENARIO, LB, UB, DEF_FEAT_VALUE, KB_PATH, KB_NAME, TIMEOUT, FEATURES,
+#      PORTFOLIO)
 
 
-# Creating SCENARIO.info
-writer = csv.writer(open(KB_PATH + SCENARIO + '.info', 'w'), delimiter = '|')
+kb_dir = KB_PATH + '/' + KB_NAME + '/'
+if not os.path.exists(kb_dir):
+    os.makedirs(kb_dir)
+    
+# Creating SCENARIO_info
+writer = csv.writer(open(kb_dir + SCENARIO + '.info', 'w'), delimiter = '|')
 
 # Processing runtime informations.
 reader = csv.reader(open(WD_PATH + 'algorithm_runs.arff'), delimiter = ',')
@@ -164,19 +168,25 @@ lims = {}
 for row in reader:
     inst = row[0]
     nan = float("nan")
-    feat_vector = eval(row[1])
+    feat_vector =[]
+    for f in row[2:]:
+        if f == '?':
+            feat_vector.append(DEF_FEAT_VALUE)
+        else:
+            feat_vector.append(float(f))
+    #print(feat_vector)
     if not lims:
         for k in range(0, len(feat_vector)):
             lims[k] = [float('+inf'), float('-inf')]
-        # Computing min/max value for each feature.
-        for k in range(0, len(feat_vector)):
-            if not isnan(feat_vector[k]):
-                if feat_vector[k] < lims[k][0]:
-                    lims[k][0] = feat_vector[k]
-                elif feat_vector[k] > lims[k][1]:
-                    lims[k][1] = feat_vector[k]
-        features[inst] = feat_vector
-        assert len(feat_vector) == FEATURES
+    # Computing min/max value for each feature.
+    for k in range(0, len(feat_vector)):
+        if not isnan(feat_vector[k]):
+            if feat_vector[k] < lims[k][0]:
+                lims[k][0] = feat_vector[k]
+            elif feat_vector[k] > lims[k][1]:
+                lims[k][1] = feat_vector[k]
+    features[inst] = feat_vector
+    assert len(feat_vector) == FEATURES
         
 for (inst, feat_vector) in features.items():
     if not [s for s, it in kb[inst].items() if it['info'] == 'ok']:
@@ -200,8 +210,8 @@ for (inst, feat_vector) in features.items():
     kb_row = [inst, new_feat_vector, kb[inst]]
     writer.writerow(kb_row)
   
-# Creating SCENARIO.info
-lim_file = KB_PATH + '/' + KB_NAME + '/' + SCENARIO + '_lims'
+# Creating SCENARIO_lims
+lim_file = kb_dir + SCENARIO + '_lims'
 with open(lim_file, 'w') as outfile:
     json.dump(lims, outfile)
     
