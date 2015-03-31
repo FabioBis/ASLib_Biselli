@@ -27,10 +27,13 @@ Output
 import sys
 import os
 import getopt
+import csv
+import json
+from math import isnan
 
 # ASLib version.
 VERSION = '1.0.1'
-
+                  
 
 def parse_arguments(args):
     '''
@@ -96,7 +99,7 @@ def parse_description(path):
     PORTFOLIO and n. of ALGORITHM.
     '''
     #FIXME use csv.reader
-    with open(path + '/description.txt', 'r') as f:
+    with open(path + 'description.txt', 'r') as f:
         for line in f:
             [key, value] = line.split(': ', 1)
             if key == 'algorithm_cutoff_time':
@@ -113,8 +116,92 @@ def parse_description(path):
 SCENARIO, LB, UB, DEF_FEAT_VALUE, KB_PATH, KB_NAME = \
 parse_arguments(sys.argv[1:])
 
-TIMEOUT, FEATURES, PORTFOLIO = \
-parse_description(os.path.abspath(os.path.join(os.getcwd(), os.pardir)) + 
-                  '/data/aslib_' + VERSION + '/' + SCENARIO)
+# Working direcory path. TODO: fix on tool deploy.
+WD_PATH = os.path.abspath(os.path.join(os.getcwd(), os.pardir)) + \
+    '/data/aslib_' + VERSION + '/' + SCENARIO + '/'
 
-print(TIMEOUT, FEATURES, PORTFOLIO)
+TIMEOUT, FEATURES, PORTFOLIO = \
+parse_description(WD_PATH)
+
+
+print(SCENARIO, LB, UB, DEF_FEAT_VALUE, KB_PATH, KB_NAME, TIMEOUT, FEATURES,
+      PORTFOLIO)
+
+
+# Creating SCENARIO.info
+writer = csv.writer(open(KB_PATH + SCENARIO + '.info', 'w'), delimiter = '|')
+
+# Processing runtime informations.
+reader = csv.reader(open(WD_PATH + 'algorithm_runs.arff'), delimiter = ',')
+for row in reader:
+    if row and row[0].strip().upper() == '@DATA':
+        # Iterates until preamble ends.
+        break
+kb = {}
+n = 0
+for row in reader:
+    n += 1
+    inst = row[0]
+    solver = row[2]
+    info = row[4]
+    if info != 'ok':
+        time = TIMEOUT
+    else:
+        time = float(row[3])
+    assert time != 'ok' or time < TIMEOUT
+    if inst not in kb.keys():
+        kb[inst] = {}
+    kb[inst][solver] = {'info': info, 'time': time}
+    
+# Processing features.
+reader = csv.reader(open(WD_PATH + 'feature_values.arff'), delimiter = ',')
+for row in reader:
+    if row and row[0].strip().upper() == '@DATA':
+        # Iterates until preamble ends.
+        break
+features = {}
+lims = {}
+for row in reader:
+    inst = row[0]
+    nan = float("nan")
+    feat_vector = eval(row[1])
+    if not lims:
+        for k in range(0, len(feat_vector)):
+            lims[k] = [float('+inf'), float('-inf')]
+        # Computing min/max value for each feature.
+        for k in range(0, len(feat_vector)):
+            if not isnan(feat_vector[k]):
+                if feat_vector[k] < lims[k][0]:
+                    lims[k][0] = feat_vector[k]
+                elif feat_vector[k] > lims[k][1]:
+                    lims[k][1] = feat_vector[k]
+        features[inst] = feat_vector
+        assert len(feat_vector) == FEATURES
+        
+for (inst, feat_vector) in features.items():
+    if not [s for s, it in kb[inst].items() if it['info'] == 'ok']:
+        continue
+    new_feat_vector = []
+    for k in range(0, len(feat_vector)):
+        if lims[k][0] == lims[k][1]:
+            # Ignore constant features.
+            continue
+        if isnan(feat_vector[k]):
+            new_val = DEF_FEAT_VALUE
+        else:
+            min_val = lims[k][0]
+            max_val = lims[k][1]
+            # Scale feature value in [LB, UB].
+            x = (feat_vector[k] - min_val) / (max_val - min_val)
+            new_val = LB + (UB - LB) * x
+        assert LB <= new_val <= UB
+        new_feat_vector.append(new_val)
+    assert nan not in new_feat_vector
+    kb_row = [inst, new_feat_vector, kb[inst]]
+    writer.writerow(kb_row)
+  
+# Creating SCENARIO.info
+lim_file = KB_PATH + '/' + KB_NAME + '/' + SCENARIO + '_lims'
+with open(lim_file, 'w') as outfile:
+    json.dump(lims, outfile)
+    
