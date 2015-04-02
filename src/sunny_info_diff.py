@@ -43,9 +43,10 @@ def main(args):
   else:
     print('Error! ' + args[0] + ' does not exixst.', sys.stderr)
     sys.exit(2)
+  
 
-  reader_1 = csv.reader(open(source_1, 'w'), delimiter = '|')
-  reader_2 = csv.reader(open(source_2, 'w'), delimiter = '|')
+  reader_1 = csv.reader(open(source_1, 'r'), delimiter = '|')
+  reader_2 = csv.reader(open(source_2, 'r'), delimiter = '|')
   diff = False
   for row1 in reader_1:
     try:
@@ -58,12 +59,14 @@ def main(args):
         for index in range(max(len(row1[1]), len(row2[1]))):
           if float(row1[1][index]) != float(row2[1][index]):
             print(float(row1[1][index]), float(row2[1][index]))
-      if row1[2] != row2[2]:
-        diff = True
-        print(row1[2], row2[2])
+        # FIXME: json compare?
+#       if str1 == str2:
+#         diff = True
+#         print(js1, js2)
     except StopIteration:
       print(row1)
   if not diff:
     print('Info files are identical.')
+    
 if __name__ == '__main__':
   main(sys.argv[1:])
