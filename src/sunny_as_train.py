@@ -100,17 +100,16 @@ def parse_description(path):
   and returns the following values: TIMEOUT, n. of FEATURES,
   PORTFOLIO and n. of ALGORITHM.
   '''
-  #FIXME use csv.reader
-  with open(path + 'description.txt', 'r') as f:
-    for line in f:
-      [key, value] = line.split(': ', 1)
-      if key == 'algorithm_cutoff_time':
-        timeout = int(value.rstrip('\n'))
-      elif key == 'features_deterministic':
-        features = len(value.split(','))
-  f.close()
+  reader = csv.reader(open(path + 'description.txt'), delimiter=':')
+  features = 0
+  for row in reader:
+    if row[0] == 'algorithm_cutoff_time':
+      timeout = int(row[1])
+    elif row[0] == 'features_deterministic':
+      features += len(row[1].split(','))
+    elif row[0] == 'features_stochastic':
+      features += len(row[1].split(','))
   return timeout, features
-
 
 def main(args):
   # Initialize Feature and Knowledge Base variables.
@@ -176,7 +175,6 @@ def main(args):
         elif feat_vector[k] > lims[k][1]:
           lims[k][1] = feat_vector[k]
     features[inst] = feat_vector
-    print(len(feat_vector), num_of_features)
     assert len(feat_vector) == num_of_features
 
   for (inst, feat_vector) in features.items():
