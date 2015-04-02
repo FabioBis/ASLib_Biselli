@@ -176,6 +176,7 @@ def main(args):
         elif feat_vector[k] > lims[k][1]:
           lims[k][1] = feat_vector[k]
     features[inst] = feat_vector
+    print(len(feat_vector), num_of_features)
     assert len(feat_vector) == num_of_features
 
   for (inst, feat_vector) in features.items():
