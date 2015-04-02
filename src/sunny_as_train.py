@@ -5,7 +5,7 @@ Created on 27/mar/2015
 
 @author: Fabio Biselli
 
-sunny_as_train [OPTIONS] <SCENARIO>
+sunny_as_train [OPTIONS] <SCENARIO_PATH>
 
 Options
 =======
@@ -54,13 +54,12 @@ def parse_arguments(args):
     print('For help use --help', sys.stderr)
     sys.exit(2)
 
-  # FIXME: os.path.exists per controllare se esiste
   if os.path.exists(args[0]):
     scenario = args[0] # = os.path.abspath(os.path.join(path, os.pardir))
   else:
     assert False
+    
   # Initialize variables with default values.
-
   if scenario[-1] != '/':
     scenario += '/'
   lb = -1
@@ -112,27 +111,23 @@ def parse_description(path):
   f.close()
   return timeout, features
 
+
 def main(args):
-  #FIXME: notazione minuscole per var locali.
-
   # Initialize Feature and Knowledge Base variables.
-  SCENARIO, LB, UB, DEF_FEAT_VALUE, KB_PATH, KB_NAME = parse_arguments(args)
+  scenario, lb, ub, def_feat_value, kb_path, kb_name = parse_arguments(args)
+  timeout, num_of_features = parse_description(scenario)
 
-  TIMEOUT, FEATURES = parse_description(SCENARIO)
+  #print(scenario, lb, ub, def_feat_value, kb_path, kb_name, timeout,
+  #  num_of_features)
 
-  #print(SCENARIO, LB, UB, DEF_FEAT_VALUE, KB_PATH, KB_NAME, TIMEOUT, FEATURES,
-  #    PORTFOLIO)
-
-
-  kb_dir = KB_PATH + '/' + KB_NAME + '/'
+  kb_dir = kb_path + '/' + kb_name + '/'
   if not os.path.exists(kb_dir):
     os.makedirs(kb_dir)
 
   # Creating SCENARIO_info
-  writer = csv.writer(open(kb_dir + KB_NAME + '.info', 'w'), delimiter = '|')
-
+  writer = csv.writer(open(kb_dir + kb_name + '.info', 'w'), delimiter = '|')
   # Processing runtime informations.
-  reader = csv.reader(open(SCENARIO + 'algorithm_runs.arff'), delimiter = ',')
+  reader = csv.reader(open(scenario + 'algorithm_runs.arff'), delimiter = ',')
   for row in reader:
     if row and row[0].strip().upper() == '@DATA':
     # Iterates until preamble ends.
@@ -145,16 +140,15 @@ def main(args):
     solver = row[2]
     info = row[4]
     if info != 'ok':
-      time = TIMEOUT
+      time = timeout
     else:
       time = float(row[3])
-    assert time != 'ok' or time < TIMEOUT
+    assert time != 'ok' or time < timeout
     if inst not in kb.keys():
       kb[inst] = {}
     kb[inst][solver] = {'info': info, 'time': time}
-
   # Processing features.
-  reader = csv.reader(open(SCENARIO + 'feature_values.arff'), delimiter = ',')
+  reader = csv.reader(open(scenario + 'feature_values.arff'), delimiter = ',')
   for row in reader:
     if row and row[0].strip().upper() == '@DATA':
       # Iterates until preamble ends.
@@ -182,7 +176,7 @@ def main(args):
         elif feat_vector[k] > lims[k][1]:
           lims[k][1] = feat_vector[k]
     features[inst] = feat_vector
-    assert len(feat_vector) == FEATURES
+    assert len(feat_vector) == num_of_features
 
   for (inst, feat_vector) in features.items():
     if not [s for s, it in kb[inst].items() if it['info'] == 'ok']:
@@ -193,21 +187,21 @@ def main(args):
         # Ignore constant features.
         continue
       if isnan(feat_vector[k]):
-        new_val = DEF_FEAT_VALUE
+        new_val = def_feat_value
       else:
         min_val = lims[k][0]
         max_val = lims[k][1]
-        # Scale feature value in [LB, UB].
+        # Scale feature value in [lb, ub].
         x = (feat_vector[k] - min_val) / (max_val - min_val)
-        new_val = LB + (UB - LB) * x
-      assert LB <= new_val <= UB
+        new_val = lb + (ub - lb) * x
+      assert lb <= new_val <= ub
       new_feat_vector.append(new_val)
     assert nan not in new_feat_vector
     kb_row = [inst, new_feat_vector, kb[inst]]
     writer.writerow(kb_row)
 
   # Creating SCENARIO_lims
-  lim_file = kb_dir + KB_NAME + '.lims'
+  lim_file = kb_dir + kb_name + '.lims'
   with open(lim_file, 'w') as outfile:
     json.dump(lims, outfile)
 
