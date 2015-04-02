@@ -37,7 +37,7 @@ def parse_arguments(args):
   arguments properly set.
   '''
   try:
-    long_options = ['feat-range=', 'feat-def=', 'kb-path=', 'kb-name=', 'help']
+    long_options = ['feat-range=', 'feat-def=', 'out-path=', 'kb-name=', 'help']
     opts, args = getopt.getopt(args, 'h:', long_options)
   except getopt.GetoptError as msg:
     print(msg)
@@ -117,8 +117,8 @@ def main(args):
   scenario, lb, ub, def_feat_value, kb_path, kb_name = parse_arguments(args)
   timeout, num_of_features = parse_description(scenario)
 
-  #print(scenario, lb, ub, def_feat_value, kb_path, kb_name, timeout,
-  #  num_of_features)
+  print(scenario, lb, ub, def_feat_value, kb_path, kb_name, timeout,
+    num_of_features)
 
   kb_dir = kb_path + '/' + kb_name + '/'
   if not os.path.exists(kb_dir):
