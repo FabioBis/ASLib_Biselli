@@ -55,16 +55,20 @@ def main(args):
         diff = True
         print(row1[0],  row2[0])
       if row1[1] != row2[1]:
-        diff = True
         for index in range(max(len(row1[1]), len(row2[1]))):
           if float(row1[1][index]) != float(row2[1][index]):
+            diff = True
             print(float(row1[1][index]), float(row2[1][index]))
-        # FIXME: json compare?
-#       if str1 == str2:
-#         diff = True
-#         print(js1, js2)
+      # FIXME: json compare: JSON requires double quotes.
+      #        str.replace("'", '"') should fix the validation.
+      if row1[2] != row2[2]:
+        diff = True
+        print(row1[2], row2[2])
     except StopIteration:
-      print(row1)
+      diff = True
+      print row1
+      for row in reader_1:
+        print row
   if not diff:
     print('Info files are identical.')
     
