@@ -106,10 +106,9 @@ def parse_description(path):
     if row[0] == 'algorithm_cutoff_time':
       timeout = float(row[1])
     elif row[0] == 'features_deterministic':
-      features += len(row[1].split(','))
+      features += len([x for x in row[1].split(',') if x.strip()])
     elif row[0] == 'features_stochastic':
-      if row[1] != ' ':
-        features += len(row[1].split(','))
+      features += len([x for x in row[1].split(',') if x.strip()])
   return timeout, features
 
 def main(args):
