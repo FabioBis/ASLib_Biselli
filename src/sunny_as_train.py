@@ -41,7 +41,7 @@ def parse_arguments(args):
     opts, args = getopt.getopt(args, 'h:', long_options)
   except getopt.GetoptError as msg:
     print(msg)
-    print('For help use --help', sys.stderr)
+    print 'For help use --help'
     sys.exit(2)
 
   if len(args) == 0:
@@ -50,15 +50,15 @@ def parse_arguments(args):
       if o in ('-h', '--help'):
         print(__doc__)
         sys.exit(0)
-    print('Error! No arguments given.', sys.stderr)
-    print('For help use --help', sys.stderr)
+    print 'Error! No arguments given.'
+    print 'For help use --help'
     sys.exit(2)
 
   if os.path.exists(args[0]):
     scenario = args[0]
   else:
-    print('Error: ' +args[0]+ ' does not exists.', sys.stderr)
-    print('For help use --help', sys.stderr)
+    print 'Error: ' +args[0]+ ' does not exists.'
+    print 'For help use --help'
     sys.exit(2)
     
   # Initialize variables with default values.
@@ -104,28 +104,36 @@ def parse_description(path):
   '''
   reader = csv.reader(open(path + 'description.txt'), delimiter=':')
   features = 0
+  portfolio = []
   for row in reader:
     if row[0] == 'algorithm_cutoff_time':
       timeout = float(row[1])
+    elif row[0] == 'algorithms_deterministic':
+      portfolio = [x.strip() for x in row[1].split(',') if x.strip()]
     elif row[0] == 'features_deterministic':
       features += len([x for x in row[1].split(',') if x.strip()])
     elif row[0] == 'features_stochastic':
       features += len([x for x in row[1].split(',') if x.strip()])
-  return timeout, features
+  return portfolio, timeout, features
 
 def main(args):
   # Initialize Feature and Knowledge Base variables.
   scenario, lb, ub, def_feat_value, kb_path, kb_name = parse_arguments(args)
-  timeout, num_of_features = parse_description(scenario)
+  porfolio, timeout, num_of_features = parse_description(scenario)
 
-  print(scenario, lb, ub, def_feat_value, kb_path, kb_name, timeout,
-    num_of_features)
+  #print(porfolio, scenario, lb, ub, def_feat_value, kb_path, kb_name, timeout,
+  #  num_of_features)
 
   kb_dir = kb_path + '/' + kb_name + '/'
   if not os.path.exists(kb_dir):
     os.makedirs(kb_dir)
+    
+  # Creating SCENARIO.args.
+  writer = csv.writer(open(kb_dir + kb_name + '.args', 'w'), delimiter = '|')
+  writer.writerow([lb, ub, def_feat_value, timeout, num_of_features,
+                   porfolio])
 
-  # Creating SCENARIO_info
+  # Creating SCENARIO.info
   writer = csv.writer(open(kb_dir + kb_name + '.info', 'w'), delimiter = '|')
   # Processing runtime informations.
   reader = csv.reader(open(scenario + 'algorithm_runs.arff'), delimiter = ',')
