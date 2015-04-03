@@ -55,9 +55,11 @@ def parse_arguments(args):
     sys.exit(2)
 
   if os.path.exists(args[0]):
-    scenario = args[0] # = os.path.abspath(os.path.join(path, os.pardir))
+    scenario = args[0]
   else:
-    assert False
+    print('Error: ' +args[0]+ ' does not exists.', sys.stderr)
+    print('For help use --help', sys.stderr)
+    sys.exit(2)
     
   # Initialize variables with default values.
   if scenario[-1] != '/':
