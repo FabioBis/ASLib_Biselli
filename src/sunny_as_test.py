@@ -90,10 +90,11 @@ def parse_arguments(args):
     def_feat_value = row[2]
     timeout = row[3]
     portfolio = row[5]
+    instances = row[6]
     
   static_schedule = '' # TODO: not defined.
-  k = 1 # FIXME: TODO sqrt(train set size).
-  backup = None # FIXME: SBS
+  k = int(round(sqrt(instances)))
+  backup = None
   out_file = None
 
   # Options parsing.
@@ -117,7 +118,7 @@ def parse_arguments(args):
       out_file = a
 
   return lb, ub, def_feat_value, kb_path, kb_name, static_schedule, timeout, \
-    k, portfolio, backup, out_file, feature_values
+    k, portfolio, backup, out_file, feature_values, instances
 
 
 def normalize(feat_vector, lims, inf, sup, def_feat_value):
@@ -166,7 +167,6 @@ def get_neighbours(feat_vector, kb, portfolio, k, timout, instances):
     distances.append((d, inst))
     infos[inst] = row[2]
     
-  # FIXME: Compute backup (SBS) inside train (.args file)? 
   best = min((instances - solved[s][0],
               solved[s][1], s) for s in solved.keys())
   backup = best[2]
@@ -259,7 +259,8 @@ def get_schedule(neighbours, timeout, portfolio, k, backup):
 
 def main(args):
   lb, ub, def_feat_value, kb_path, kb_name, static_schedule, timeout, k, \
-    portfolio, backup, out_file, feature_values = parse_arguments(args)
+    portfolio, backup, out_file, feature_values, \
+    instances = parse_arguments(args)
   if out_file:
     writer = csv.writer(open(out_file, 'w'), delimiter = ',')
   # Here we assume the feature_costs.arff file is into kb directory.
@@ -283,9 +284,10 @@ def main(args):
     inst = row[0]
     feats = normalize(row[2:], lims, lb, ub, def_feat_value)
     kb = kb_path + kb_name + '.info'
-    # TODO: how to compute instances?
-    neighbours, backup = get_neighbours(feats, kb, portfolio, k, timeout,
+    neighbours, new_backup = get_neighbours(feats, kb, portfolio, k, timeout,
                                         instances)
+    if not backup:
+      backup = new_backup
     if feature_cost:
       if timeout > feature_cost[inst]: 
         schedule = get_schedule(neighbours, timeout - feature_cost[inst],
@@ -297,10 +299,10 @@ def main(args):
       schedule = get_schedule(neighbours, timeout, portfolio, k, backup)
     if out_file:
       # FIXME: output: instanceID,runID,solver,timeLimit
-      writer.writerow([inst, i, j, schedule])
+      writer.writerow([inst, schedule, timeout])
     else:
       # FIXME: output: instanceID,runID,solver,timeLimi
-      print inst, i, j, schedule
+      print inst, schedule, timeout
 
 if __name__ == '__main__':
   main(sys.argv[1:])

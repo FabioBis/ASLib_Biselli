@@ -127,11 +127,6 @@ def main(args):
   kb_dir = kb_path + '/' + kb_name + '/'
   if not os.path.exists(kb_dir):
     os.makedirs(kb_dir)
-    
-  # Creating SCENARIO.args.
-  writer = csv.writer(open(kb_dir + kb_name + '.args', 'w'), delimiter = '|')
-  writer.writerow([lb, ub, def_feat_value, timeout, num_of_features,
-                   porfolio])
 
   # Creating SCENARIO.info
   writer = csv.writer(open(kb_dir + kb_name + '.info', 'w'), delimiter = '|')
@@ -164,8 +159,11 @@ def main(args):
       break
   features = {}
   lims = {}
+  instances = []
   for row in reader:
     inst = row[0]
+    if inst not in instances:
+      instances.append(inst)
     nan = float("nan")
     feat_vector =[]
     for f in row[2:]:
@@ -213,6 +211,12 @@ def main(args):
   lim_file = kb_dir + kb_name + '.lims'
   with open(lim_file, 'w') as outfile:
     json.dump(lims, outfile)
+    
+      
+  # Creating SCENARIO.args.
+  writer = csv.writer(open(kb_dir + kb_name + '.args', 'w'), delimiter = '|')
+  writer.writerow([lb, ub, def_feat_value, timeout, num_of_features,
+                   porfolio, len(instances)])
 
 if __name__ == '__main__':
   main(sys.argv[1:])
