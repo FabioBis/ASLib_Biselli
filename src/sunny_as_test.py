@@ -36,7 +36,7 @@ import getopt
 import csv
 import json
 from math import sqrt
-from combinations import *
+from combinations import binom, get_subset
 
 def parse_arguments(args):
   '''
@@ -61,11 +61,13 @@ def parse_arguments(args):
     print 'For help use --help'
     sys.exit(2)
     
+  feature_values = args[0]
+    
   # Initialize variables with default values.
   kb_path = os.getcwd()
   if kb_path[-1] != '/':
     kb_path += '/'
-  name = kb_path.split('/')[-2]
+  kb_name = kb_path.split('/')[-2]
   # KB option parsing.
   for o, a in opts:
     if o == '-K':
@@ -73,15 +75,15 @@ def parse_arguments(args):
         kb_path = a
         if kb_path[-1] != '/':
           kb_path += '/'
-        name = kb_path.split('/')[-2]
+        kb_name = kb_path.split('/')[-2]
       else:
         print 'Error: ' +a+ ' does not exists.'
         print 'Using default folder (cwd).'
   # Read arguments.
-  if not os.path.exists(kb_path + name + '.args'):
-    print 'Error: ' + kb_path + name + '.args does not exists.'
+  if not os.path.exists(kb_path + kb_name + '.args'):
+    print 'Error: ' + kb_path + kb_name + '.args does not exists.'
     sys.exit(2)    
-  reader = csv.reader(open(kb_path + name + '.args'), delimiter = '|')
+  reader = csv.reader(open(kb_path + kb_name + '.args'), delimiter = '|')
   for row in reader:
     lb = row[0]
     ub = row[1]
@@ -111,9 +113,11 @@ def parse_arguments(args):
       backup = a
     elif o == '-T':
       timeout = float(a)
+    elif o == '-o':
+      out_file = a
 
-  return lb, ub, def_feat_value, kb_path, static_schedule, timeout, k, \
-    portfolio, backup, out_file
+  return lb, ub, def_feat_value, kb_path, kb_name, static_schedule, timeout, \
+    k, portfolio, backup, out_file, feature_values
 
 
 def normalize(feat_vector, lims, inf, sup, def_feat_value):
@@ -165,11 +169,10 @@ def get_neighbours(feat_vector, kb, portfolio, k, timout, instances):
   # FIXME: Compute backup (SBS) inside train (.args file)? 
   best = min((instances - solved[s][0],
               solved[s][1], s) for s in solved.keys())
-  global BACKUP  
-  BACKUP = best[2]
+  backup = best[2]
   # FIXME: Unused sorted_dist?
   sorted_dist = distances.sort(key = lambda x : x[0])
-  return dict((inst, infos[inst]) for (d, inst) in distances[0 : k])
+  return dict((inst, infos[inst]) for (d, inst) in distances[0 : k]), backup
 
 
 def euclidean_distance(fv1, fv2):
@@ -184,7 +187,7 @@ def euclidean_distance(fv1, fv2):
   return sqrt(distance)
 
 
-def get_schedule(neighbours, timeout, portfolio, k):
+def get_schedule(neighbours, timeout, portfolio, k, backup):
   """
   Given the neighborhood of a given problem and the backup solver, returns the 
   corresponding SUNNY schedule.
@@ -245,17 +248,59 @@ def get_schedule(neighbours, timeout, portfolio, k):
   tot_time = sum(schedule.values())
   # Allocate to the backup solver the (eventual) remaining time.
   if round(tot_time) < timeout:
-    if BACKUP in schedule.keys():
-      schedule[BACKUP] += timeout - tot_time
+    if backup in schedule.keys():
+      schedule[backup] += timeout - tot_time
     else:
-      schedule[BACKUP]  = timeout - tot_time
+      schedule[backup]  = timeout - tot_time
   sorted_schedule = sorted(schedule.items(), key = lambda x: times[x[0]])
   assert sum(t for (s, t) in sorted_schedule) - timeout < 0.001
   return sorted_schedule
 
 
 def main(args):
-  parse_arguments(args)
+  lb, ub, def_feat_value, kb_path, kb_name, static_schedule, timeout, k, \
+    portfolio, backup, out_file, feature_values = parse_arguments(args)
+  if out_file:
+    writer = csv.writer(open(out_file, 'w'), delimiter = ',')
+  # Here we assume the feature_costs.arff file is into kb directory.
+  feature_cost = None
+  if os.path.exists(kb_path + 'feature_costs.arff'):
+    # TODO: check if works as intended (feature_costs.arff optional).
+    reader = csv.reader(open(kb_path + 'feature_costs.arff'), delimiter = ',')
+    for row in reader:
+      if row and row[0].strip().upper() == '@DATA':
+        # Iterates until preamble ends.
+        break
+    feature_cost = {}
+    for row in reader:
+      feature_cost[row[0]] = sum(float(f) for f in row[2:] if f != '?')
+    
+  with open(kb_path + kb_name + '.lims') as infile:
+    lims = json.load(infile)
+  for feature in feature_values:
+    # Here we assume feature_values is a vector of str (feature_values.arff).
+    row = feature.split(',')
+    inst = row[0]
+    feats = normalize(row[2:], lims, lb, ub, def_feat_value)
+    kb = kb_path + kb_name + '.info'
+    # TODO: how to compute instances?
+    neighbours, backup = get_neighbours(feats, kb, portfolio, k, timeout,
+                                        instances)
+    if feature_cost:
+      if timeout > feature_cost[inst]: 
+        schedule = get_schedule(neighbours, timeout - feature_cost[inst],
+                                portfolio, k, backup)
+      else:
+        schedule = []
+    else:
+      # TODO: check if works as intended (feature_costs.arff optional).
+      schedule = get_schedule(neighbours, timeout, portfolio, k, backup)
+    if out_file:
+      # FIXME: output: instanceID,runID,solver,timeLimit
+      writer.writerow([inst, i, j, schedule])
+    else:
+      # FIXME: output: instanceID,runID,solver,timeLimi
+      print inst, i, j, schedule
 
 if __name__ == '__main__':
   main(sys.argv[1:])
