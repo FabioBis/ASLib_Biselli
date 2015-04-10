@@ -13,6 +13,8 @@ Options
     Knowledge base  path (default: $PWD).
   -s <STATIC_SCHEDULE>
     Static schedule to be run in the presolving phase. By default is empty.
+  -c <COST>
+    Set the feature cost. By default is 0.
   -k <NEIGH.SIZE>
     The default value is sqrt(train set size).
   -P <S1,...,Sk>
@@ -45,7 +47,7 @@ def parse_arguments(args):
   '''
   try:
     long_options = ['help']
-    opts, args = getopt.getopt(args, 'K:s:k:P:b:T:o:h:', long_options)
+    opts, args = getopt.getopt(args, 'K:s:c:k:P:b:T:o:h:', long_options)
   except getopt.GetoptError as msg:
     print msg
     print 'For help use --help'
@@ -61,7 +63,7 @@ def parse_arguments(args):
     print 'For help use --help'
     sys.exit(2)
     
-  feature_values = args[0]
+  feature_values = args[0].split(',')
     
   # Initialize variables with default values.
   kb_path = os.getcwd()
@@ -92,7 +94,8 @@ def parse_arguments(args):
     portfolio = row[5]
     instances = row[6]
     
-  static_schedule = '' # TODO: not defined.
+  feature_cost = 0
+  static_schedule = [] # TODO: not defined.
   k = int(round(sqrt(instances)))
   backup = None
   out_file = None
@@ -106,6 +109,8 @@ def parse_arguments(args):
       static_schedule = a
     elif o == '-k':
       k = int(a)
+    elif o == '-c':
+      feature_cost = float(a)
     elif o == '-P':
       s = a.split(',')
       for sol in s:
@@ -118,7 +123,7 @@ def parse_arguments(args):
       out_file = a
 
   return lb, ub, def_feat_value, kb_path, kb_name, static_schedule, timeout, \
-    k, portfolio, backup, out_file, feature_values, instances
+    k, portfolio, backup, out_file, feature_values, feature_cost, instances
 
 
 def normalize(feat_vector, lims, inf, sup, def_feat_value):
@@ -259,50 +264,31 @@ def get_schedule(neighbours, timeout, portfolio, k, backup):
 
 def main(args):
   lb, ub, def_feat_value, kb_path, kb_name, static_schedule, timeout, k, \
-    portfolio, backup, out_file, feature_values, \
+    portfolio, backup, out_file, feature_values, feature_cost, \
     instances = parse_arguments(args)
   if out_file:
     writer = csv.writer(open(out_file, 'w'), delimiter = ',')
-  # Here we assume the feature_costs.arff file is into kb directory.
-  feature_cost = None
-  if os.path.exists(kb_path + 'feature_costs.arff'):
-    # TODO: check if works as intended (feature_costs.arff optional).
-    reader = csv.reader(open(kb_path + 'feature_costs.arff'), delimiter = ',')
-    for row in reader:
-      if row and row[0].strip().upper() == '@DATA':
-        # Iterates until preamble ends.
-        break
-    feature_cost = {}
-    for row in reader:
-      feature_cost[row[0]] = sum(float(f) for f in row[2:] if f != '?')
     
   with open(kb_path + kb_name + '.lims') as infile:
     lims = json.load(infile)
-  for feature in feature_values:
-    # Here we assume feature_values is a vector of str (feature_values.arff).
-    row = feature.split(',')
-    inst = row[0]
-    feats = normalize(row[2:], lims, lb, ub, def_feat_value)
-    kb = kb_path + kb_name + '.info'
-    neighbours, new_backup = get_neighbours(feats, kb, portfolio, k, timeout,
-                                        instances)
-    if not backup:
-      backup = new_backup
-    if feature_cost:
-      if timeout > feature_cost[inst]: 
-        schedule = get_schedule(neighbours, timeout - feature_cost[inst],
-                                portfolio, k, backup)
-      else:
-        schedule = []
-    else:
-      # TODO: check if works as intended (feature_costs.arff optional).
-      schedule = get_schedule(neighbours, timeout, portfolio, k, backup)
-    if out_file:
-      # FIXME: output: instanceID,runID,solver,timeLimit
-      writer.writerow([inst, schedule, timeout])
-    else:
-      # FIXME: output: instanceID,runID,solver,timeLimi
-      print inst, schedule, timeout
+  
+  feats = normalize(feature_values, lims, lb, ub, def_feat_value)
+  kb = kb_path + kb_name + '.info'
+  neighbours, new_backup = get_neighbours(feats, kb, portfolio, k, timeout,
+                                          instances)
+  if not backup:
+    backup = new_backup
+  if timeout > feature_cost: 
+    schedule = get_schedule(neighbours, timeout - feature_cost,
+                              portfolio, k, backup)
+  else:
+    schedule = []
+  if out_file:
+    # FIXME: output: instanceID,runID,solver,timeLimit
+    writer.writerow([schedule, timeout])
+  else:
+    # FIXME: output: instanceID,runID,solver,timeLimi
+    print schedule, timeout
 
 if __name__ == '__main__':
   main(sys.argv[1:])
