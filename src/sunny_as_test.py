@@ -10,7 +10,7 @@ sunny_as_test [OPTIONS] <FEAT_VECTOR>
 Options
 =======
   -K <KB_DIR>
-    Knowledge base  path (default: $PWD).
+    Knowledge base path (default: $PWD).
   -s <STATIC_SCHEDULE>
     Static schedule to be run in the presolving phase. By default is empty.
   -c <COST>
@@ -37,6 +37,7 @@ import os
 import getopt
 import csv
 import json
+import ast
 from math import sqrt
 from combinations import binom, get_subset
 
@@ -87,12 +88,12 @@ def parse_arguments(args):
     sys.exit(2)    
   reader = csv.reader(open(kb_path + kb_name + '.args'), delimiter = '|')
   for row in reader:
-    lb = row[0]
-    ub = row[1]
-    def_feat_value = row[2]
-    timeout = row[3]
-    portfolio = row[5]
-    instances = row[6]
+    lb = int(row[0])
+    ub = int(row[1])
+    def_feat_value = float(row[2])
+    timeout = float(row[3])
+    portfolio = ast.literal_eval(row[5])
+    instances = float(row[6])
     
   feature_cost = 0
   static_schedule = [] # TODO: not defined.
