@@ -12,7 +12,6 @@ import sys
 import os
 import getopt
 import csv
-import json
 
 def main(args):
   try:

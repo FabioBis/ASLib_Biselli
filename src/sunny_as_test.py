@@ -266,9 +266,7 @@ def get_schedule(neighbours, timeout, portfolio, k, backup):
 def main(args):
   lb, ub, def_feat_value, kb_path, kb_name, static_schedule, timeout, k, \
     portfolio, backup, out_file, feature_values, feature_cost, \
-    instances = parse_arguments(args)
-  if out_file:
-    writer = csv.writer(open(out_file, 'w'), delimiter = ',')
+    instances = parse_arguments(args)    
     
   with open(kb_path + kb_name + '.lims') as infile:
     lims = json.load(infile)
@@ -285,11 +283,14 @@ def main(args):
   else:
     schedule = []
   if out_file:
+    writer = csv.writer(open(out_file, 'w'), delimiter = ',')
     # FIXME: output: instanceID,runID,solver,timeLimit
-    writer.writerow([schedule, timeout])
+    for sch in schedule:
+      writer.writerow(sch)
   else:
     # FIXME: output: instanceID,runID,solver,timeLimi
-    print schedule, timeout
+    for sch in schedule:
+      print sch
 
 if __name__ == '__main__':
   main(sys.argv[1:])
