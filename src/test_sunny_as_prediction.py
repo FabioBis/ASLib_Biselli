@@ -5,6 +5,7 @@ Created on 27/apr/2015
 
 test_sunny_as_prediction <TEST_PATH> <KB_PATH>
 
+
 '''
 
 import sys
@@ -56,7 +57,10 @@ def main(args):
     try:
       pred_row = next(pred_reader)
       feats = feat_row[2:]
-      
+      test_prediction = pred_row[3].split(',');
+      test = os.system("sunny_as_test.py -K " + kb_dir + 
+                       " " + feats)
+      print test
       # TODO: check values.
       
     except StopIteration:
@@ -64,7 +68,7 @@ def main(args):
       print 'Stop Iteration Exception.\n'
       print feat_row
   if not diff:
-    print('Info files are identical.')
+    print('Predictions are identical.')
 
 if __name__ == '__main__':
   main(sys.argv[1:])
