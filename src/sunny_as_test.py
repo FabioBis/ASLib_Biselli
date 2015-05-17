@@ -289,8 +289,10 @@ def main(args):
       writer.writerow(sch)
   else:
     # FIXME: output: instanceID,runID,solver,timeLimi
+    runID = 1
     for sch in schedule:
-      print sch
+      print runID,sch[0],sch[1]
+      runID += 1
 
 if __name__ == '__main__':
   main(sys.argv[1:])
