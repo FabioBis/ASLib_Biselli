@@ -12,6 +12,7 @@ import sys
 import os
 import getopt
 import csv
+import subprocess
 
 def main(args):
   try:
@@ -52,23 +53,58 @@ def main(args):
 
   feat_reader = csv.reader(open(feat_values, 'r'), delimiter = ',')
   pred_reader = csv.reader(open(predictions, 'r'), delimiter = ',')
-  diff = False
+  
+  ## Create dictionaries.
+  ori_schedule = {}
+  my_schedule = {}
   for feat_row in feat_reader:
     try:
       pred_row = next(pred_reader)
       feats = feat_row[2:]
-      test_prediction = pred_row[3].split(',');
-      test = os.system("sunny_as_test.py -K " + kb_dir + 
-                       " " + feats)
-      print test
-      # TODO: check values.
-      
+      ori_schedule[pred_row[0]] = eval(pred_row[3])
+      featString = "".join(str(e) + ',' for e in feats)
+      featString = featString[:-1];
+      proc = subprocess.Popen(["./sunny_as_test.py -K "
+                               + kb_dir + " " + featString],
+                               shell=True, stdout=subprocess.PIPE)
+      schedule = []
+      while True:
+        line = proc.stdout.readline()
+        if not line:
+          break;
+        else:
+          row = line.split(' ')
+          schedule.append(row[1])
+      my_schedule[feat_row[0]] = schedule
+       
     except StopIteration:
-      diff = True
       print 'Stop Iteration Exception.\n'
       print feat_row
+      
+  ## Check differences.
+  if len(ori_schedule.values()) != len(ori_schedule.values()):
+    print('Error: predictions are NOT identical.')
+    return
+  diff = False
+  count = 0
+  for key in ori_schedule:
+    index = 0
+    for tupl in ori_schedule[key]:
+      if tupl[1] > 50: # To cut short time schedule.
+        if tupl[0] != my_schedule[key][index]:
+          diff = True
+          count += 1
+          print '------------------------------------------------------------'
+          print 'Problem on instance: ', key
+          print '------------------------------------------------------------'          
+          print 'Original:\n', ori_schedule[key]
+          print 'My:\n', my_schedule[key]
+          print '____________________________________________________________\n'
+      index += 1
   if not diff:
-    print('Predictions are identical.')
+    print('Predictions are identical.\n')
+  else:
+    print('Error: '+ str(count) + ' predictions are NOT identical.\n')
 
 if __name__ == '__main__':
   main(sys.argv[1:])
