@@ -66,9 +66,9 @@ def parse_arguments(args):
 def main(args):
   ## costDictionary = {'instance': 'feat1,feat2,...,featN'}.
   costDictionary, argString = parse_arguments(args)
-  for key in costDictionary:
+  for instance in costDictionary:
     proc = subprocess.Popen(["./sunny_as_test.py " + argString
-                               + " " + costDictionary[key]],
+                               + " " + instance + " " + costDictionary[instance]],
                                shell=True, stdout=subprocess.PIPE)
     while True:
       line = proc.stdout.readline()
@@ -76,7 +76,7 @@ def main(args):
         break;
       else:
         row = line.split(' ')
-        print key + ',' + row[0] + ',' + row[1] + ',' + row[2].strip()
+        print instance + ',' + row[0] + ',' + row[1] + ',' + row[2].strip()
 
 if __name__ == '__main__':
   main(sys.argv[1:])

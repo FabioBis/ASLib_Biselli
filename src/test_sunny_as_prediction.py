@@ -23,7 +23,7 @@ def main(args):
     print('For help use --help', sys.stderr)
     sys.exit(2)
 
-  if len(args) != 2:
+  if len(args) < 2:
     print(opts, args)
     for o in opts:
       if o in ('-h', '--help'):
@@ -65,7 +65,8 @@ def main(args):
       featString = "".join(str(e) + ',' for e in feats)
       featString = featString[:-1];
       proc = subprocess.Popen(["./sunny_as_test.py -K "
-                               + kb_dir + " " + featString],
+                               + kb_dir + " " + pred_row[0]
+                               + " " + featString],
                                shell=True, stdout=subprocess.PIPE)
       schedule = []
       while True:
@@ -73,7 +74,7 @@ def main(args):
         if not line:
           break;
         else:
-          row = line.split(' ')
+          row = line.split(',')
           schedule.append(row[1])
       my_schedule[feat_row[0]] = schedule
        
@@ -90,7 +91,7 @@ def main(args):
   for key in ori_schedule:
     index = 0
     for tupl in ori_schedule[key]:
-      if tupl[1] > 50: # To cut short time schedule.
+      if tupl[1] > 0: # To cut short time schedule.
         if tupl[0] != my_schedule[key][index]:
           diff = True
           count += 1

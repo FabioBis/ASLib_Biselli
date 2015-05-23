@@ -5,7 +5,7 @@ Created on 28/mar/2015
 
 @author: Fabio Biselli
 
-sunny_as_test [OPTIONS] <FEAT_VECTOR>
+sunny_as_test [OPTIONS] <INSTANCE_ID> <FEAT_VECTOR>
 
 Options
 =======
@@ -63,8 +63,16 @@ def parse_arguments(args):
     print 'Error! No arguments given.'
     print 'For help use --help'
     sys.exit(2)
-    
-  feature_values = args[0].split(',')
+  if len(args) == 1:
+    print(opts, args)
+    for o in opts:
+      if o in ('-h', '--help'):
+        print(__doc__)
+        sys.exit(0)
+    print 'Error! An argument missing.'
+    print 'For help use --help'
+  instance = args[0]
+  feature_values = args[1].split(',')
     
   # Initialize variables with default values.
   kb_path = os.getcwd()
@@ -124,7 +132,7 @@ def parse_arguments(args):
       out_file = a
 
   return lb, ub, def_feat_value, kb_path, kb_name, static_schedule, timeout, \
-    k, portfolio, backup, out_file, feature_values, feature_cost, instances
+    k, portfolio, backup, out_file, feature_values, feature_cost, instance, instances
 
 
 def normalize(feat_vector, lims, inf, sup, def_feat_value):
@@ -176,8 +184,7 @@ def get_neighbours(feat_vector, kb, portfolio, k, timout, instances):
   best = min((instances - solved[s][0],
               solved[s][1], s) for s in solved.keys())
   backup = best[2]
-  # FIXME: Unused sorted_dist?
-  sorted_dist = distances.sort(key = lambda x : x[0])
+  distances.sort(key = lambda x : x[0])
   return dict((inst, infos[inst]) for (d, inst) in distances[0 : k]), backup
 
 
@@ -266,7 +273,7 @@ def get_schedule(neighbours, timeout, portfolio, k, backup):
 def main(args):
   lb, ub, def_feat_value, kb_path, kb_name, static_schedule, timeout, k, \
     portfolio, backup, out_file, feature_values, feature_cost, \
-    instances = parse_arguments(args)    
+    instance, instances = parse_arguments(args)    
     
   with open(kb_path + kb_name + '.lims') as infile:
     lims = json.load(infile)
@@ -282,16 +289,17 @@ def main(args):
                               portfolio, k, backup)
   else:
     schedule = []
+  runID = 1
   if out_file:
     writer = csv.writer(open(out_file, 'w'), delimiter = ',')
-    # FIXME: output: instanceID,runID,solver,timeLimit
     for sch in schedule:
-      writer.writerow(sch)
+      writer.writerow(str(instance) + ',' + str(runID) + ',' + str(sch[0]) + ',' +
+                      str(sch[1]))
+      runID += 1
   else:
-    # FIXME: output: instanceID,runID,solver,timeLimi
-    runID = 1
     for sch in schedule:
-      print runID,sch[0],sch[1]
+      print(str(instance) + ',' + str(runID) + ',' + str(sch[0]) + ',' +
+            str(sch[1]))
       runID += 1
 
 if __name__ == '__main__':
