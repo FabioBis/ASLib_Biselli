@@ -14,6 +14,11 @@ import getopt
 import csv
 import subprocess
 
+class bcolor:
+  OKGREEN = '\033[92m'
+  FAIL = '\033[91m'
+  ENDC = '\033[0m'
+
 def main(args):
   try:
     long_options = ['help']
@@ -44,64 +49,65 @@ def main(args):
       feat_values = feat_dir + 'test_feature_values.arff'
       predictions = feat_dir + 'predictions.csv'
     else:
-      print('Error! ' + args[1] + ' does not exixst.', sys.stderr)
+      print('Error! ' + args[1] + ' does not exist.', sys.stderr)
       sys.exit(2)
   else:
-    print('Error! ' + args[0] + ' does not exixst.', sys.stderr)
+    print('Error! ' + args[0] + ' does not exist.', sys.stderr)
     sys.exit(2)
   
 
   feat_reader = csv.reader(open(feat_values, 'r'), delimiter = ',')
   pred_reader = csv.reader(open(predictions, 'r'), delimiter = ',')
   
-  ## Create dictionaries.
-  ori_schedule = {}
-  my_schedule = {}
+  diff = False
+  count = 0
   for feat_row in feat_reader:
     try:
       pred_row = next(pred_reader)
       feats = feat_row[2:]
-      ori_schedule[pred_row[0]] = eval(pred_row[3])
+      ori_schedule = eval(pred_row[3])
       featString = "".join(str(e) + ',' for e in feats)
-      featString = featString[:-1];
+      featString = featString[:-1]
       proc = subprocess.Popen(["./sunny_as_test.py -K "
                                + kb_dir + " " + pred_row[0]
                                + " " + featString],
                                shell=True, stdout=subprocess.PIPE)
-      schedule = []
+      my_schedule = []
+      out = []
       while True:
         line = proc.stdout.readline()
         if not line:
           break;
         else:
+          out.append(line)
           row = line.split(',')
-          schedule.append(row[1])
-      my_schedule[feat_row[0]] = schedule
+          my_schedule.append(row[2])
+          
+      ## Check differences.
+      index = 0;
+      for schedule in ori_schedule:
+        # To cut short time schedule.
+        if schedule[1] > 0 and index < len(my_schedule):
+          if schedule[0] != my_schedule[index]:
+            diff = True
+            count += 1
+            print bcolor.FAIL + '-------------------------------------------' \
+            '-----------------'
+            print 'Problem on instance: ', pred_row[0]
+            print '---------------------------------------------------------' \
+            '---'
+            print 'Original Schedule:\n', ori_schedule
+            print 'New Schedule:\n', my_schedule
+            print '_________________________________________________________' \
+            '___' + bcolor.ENDC
+          else:
+            print bcolor.OKGREEN + 'OK:', out[index][:-1] + bcolor.ENDC
+          index += 1
        
     except StopIteration:
       print 'Stop Iteration Exception.\n'
       print feat_row
-      
-  ## Check differences.
-  if len(ori_schedule.values()) != len(ori_schedule.values()):
-    print('Error: predictions are NOT identical.')
-    return
-  diff = False
-  count = 0
-  for key in ori_schedule:
-    index = 0
-    for tupl in ori_schedule[key]:
-      if tupl[1] > 0: # To cut short time schedule.
-        if tupl[0] != my_schedule[key][index]:
-          diff = True
-          count += 1
-          print '------------------------------------------------------------'
-          print 'Problem on instance: ', key
-          print '------------------------------------------------------------'          
-          print 'Original:\n', ori_schedule[key]
-          print 'My:\n', my_schedule[key]
-          print '____________________________________________________________\n'
-      index += 1
+
   if not diff:
     print('Predictions are identical.\n')
   else:
